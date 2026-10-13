@@ -1,163 +1,371 @@
-# ContractIQ — Agentic Contract Review
+# ContractIQ — Agentic AI Contract Review & Risk Identification System
 
-ContractIQ is a contract-review support application. It parses PDF/DOCX
-contracts and reference policies, classifies clauses, compares policy
-requirements, flags potential risks, compares contract versions, and stores
-reviewer decisions. Automated results are evidence-linked prompts for human
-review, not legal advice or a substitute for a qualified legal professional.
+ContractIQ is an AI-powered contract review system that analyzes business contracts, extracts and classifies clauses, compares contractual terms against reference policies, identifies potential risks and deviations, and generates evidence-based reports to support human review.
 
-## Current capabilities
+The project provides a web interface and a FastAPI backend for document ingestion, policy comparison, contract version comparison, risk analysis, and reviewer decisions.
 
-- PDF and DOCX text extraction with page, paragraph, and table locations.
-- Clause classification, rule-based risk flags, and policy-rule extraction.
-- Sentence Transformers embeddings with a FAISS similarity index to retrieve
-  policy passages (RAG); the source quote and source location remain attached.
-- Gemini API evidence review of preliminary findings (Ollama can also be
-  selected for local inference). Returned quotations are checked against
-  extracted source text before being marked verified; the LLM does not
-  replace or override deterministic findings.
-- Optional Redis cache for retrieved policy passages.
-- Reviewer evidence checks, persistent review history, and recorded decisions.
-- Text-level comparison of two PDF/DOCX contract versions with changed lines.
-- JWT-protected API and a single reviewer account configured through
-  environment variables.
-- PDF review report generation.
-- PostgreSQL for deployed review records; SQLite is used automatically for
-  local development when `DATABASE_URL` is not set.
+## Project Links
 
-Policy rules are inferred using transparent text patterns and should be
-validated against the uploaded reference policy. The deterministic reviewer
-checks whether quoted text is present in extracted source text. When enabled,
-the LLM reviewer assesses whether findings are supported by evidence; neither
-mechanism establishes legal correctness.
+- **Live Application:** https://contract-iq-seven.vercel.app/
+- **Backend API:** https://contractiq-api-12cr.onrender.com
+- **API Documentation:** https://contractiq-api-12cr.onrender.com/docs
+- **API Health Check:** https://contractiq-api-12cr.onrender.com/health
+- **GitHub Repository:** https://github.com/polakiajay25-blip/ContractIQ
 
-## Run locally (Windows PowerShell)
+## Features
 
-1. From the project root, create/activate a virtual environment if needed and
-   install backend dependencies:
+### 1. Document Ingestion
+- Upload supported PDF and DOCX documents.
+- Validate file types and file sizes.
+- Extract text from uploaded contracts and policy documents.
 
-   ```powershell
-   .\.venv\Scripts\Activate.ps1
-   pip install -r backend\requirements.txt
-   ```
+### 2. Clause Extraction and Classification
+- Extract relevant clauses from contracts.
+- Organize clauses into categories such as payment, confidentiality, liability, termination, warranties, intellectual property, indemnity, and dispute resolution.
 
-2. Copy `backend\.env.example` to `backend\.env`. Set a unique reviewer
-   username/password and replace `JWT_SECRET_KEY` with a random secret of at
-   least 32 characters. Local runs use SQLite by default. Set `REDIS_URL` only
-   when a Redis server is available.
+### 3. Policy Comparison
+- Compare contract clauses against reference policies or templates.
+- Extract candidate requirements and draft rules from uploaded policy documents.
+- Identify potential differences between contract terms and policy requirements.
+- Provide comparison findings and supporting evidence.
 
-3. Start the API from the project root:
+### 4. Risk Identification
+- Flag potential contractual risks.
+- Highlight relevant contract wording and source locations.
+- Categorize findings to help reviewers prioritize their examination.
 
-   ```powershell
-   .\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --reload
-   ```
+### 5. Contract Version Comparison
+- Compare different contract versions.
+- Identify changes that may require additional review.
 
-   The API is at `http://127.0.0.1:8000`; interactive API docs are at
-   `http://127.0.0.1:8000/docs`.
+### 6. Human Reviewer Mechanism
+- Present flagged items for human verification.
+- Support reviewer decisions and updates to review items.
+- Allow reviewers to examine evidence before accepting or rejecting findings.
 
-4. In another terminal, copy `frontend\.env.example` to `frontend\.env`, then
-   start the frontend:
+### 7. Report Generation
+- Generate structured contract analysis reports.
+- Include clause information, risk findings, policy comparison results, and review information where available.
+- Support PDF report generation through the implemented report endpoint.
 
-   ```powershell
-   cd frontend
-   npm install
-   npm run dev
-   ```
+### 8. Review History and Authentication
+- Provide authenticated access to protected API endpoints.
+- Support retrieval of saved review records.
+- Persist review information using the configured database.
 
-5. Sign in with the reviewer credentials in `backend\.env`. The
-   `sentence-transformers/all-MiniLM-L6-v2` model is loaded on first policy
-   comparison and may need to be downloaded once. To use Gemini, create an API
-   key in Google AI Studio and set `GEMINI_API_KEY` in `backend\.env` (never
-   paste it into chat or commit it). To use local Ollama instead, set
-   `LLM_PROVIDER=ollama` and run
-   `ollama pull llama3.2`.
+## Technology Stack
 
-## Configuration
+### Frontend
+- React
+- TypeScript
+- Vite
 
-| Variable | Purpose |
-| --- | --- |
-| `REVIEWER_USERNAME`, `REVIEWER_PASSWORD` | Single account allowed to use the API |
-| `JWT_SECRET_KEY` | JWT signing key; use a secret value of 32+ characters |
-| `JWT_ACCESS_TOKEN_MINUTES` | Token lifetime; defaults to 60 minutes |
-| `DATABASE_URL` | PostgreSQL URL in production; omitted means local SQLite |
-| `REDIS_URL` | Optional Redis connection used to cache semantic retrieval |
-| `REDIS_CACHE_TTL_SECONDS` | Redis cache duration; defaults to 3600 seconds |
-| `POLICY_EMBEDDING_MODEL` | Sentence Transformers model identifier or local model path |
-| `LLM_PROVIDER` | `gemini`, `ollama`, or `disabled` |
-| `GEMINI_API_KEY` | Google Gemini API key (required when provider is `gemini`) |
-| `GEMINI_MODEL` | Gemini model; defaults to `gemini-3.8-flash` |
-| `OLLAMA_BASE_URL` | Local Ollama endpoint; defaults to `http://127.0.0.1:11434` |
-| `OLLAMA_MODEL` | Installed local model; defaults to `llama3.2` |
-| `CORS_ORIGINS` | Comma-separated frontend origins allowed by the API |
-| `VITE_API_BASE_URL` | Backend URL used by the Vite frontend |
+### Backend
+- Python
+- FastAPI
+- Pydantic
+- Uvicorn
 
-The backend loads `backend\.env` for local development. With
-`LLM_PROVIDER=gemini`, relevant contract and policy excerpts are sent to
-Google's Gemini API for processing. Gemini API usage has free-tier quotas for
-eligible projects/models, but availability and limits can change; usage may
-be billable if the project has billing enabled or exceeds free allowances.
-Check Google AI Studio/Google Cloud quota and billing for your API key. If
-document data must not leave this machine, use `LLM_PROVIDER=ollama` with
-Ollama running locally instead. Set `LLM_PROVIDER=disabled` to use deterministic
-checks without an LLM assessment.
+### Document Processing and Analysis
+- PDF and DOCX text extraction
+- Clause extraction and classification
+- Token-overlap policy retrieval
+- Policy rule extraction and comparison
+- Risk analysis
+- Evidence-based review
+- Contract version comparison
 
-In production, set reviewer credentials, use a unique generated JWT secret,
-provide the managed Redis URL, and restrict `CORS_ORIGINS` to the deployed
-frontend origin. PostgreSQL URLs using `postgres://` or `postgresql://` are
-normalized to the installed Psycopg 3 driver.
+### Database and Storage
+- SQLAlchemy for database access
+- PostgreSQL support through `DATABASE_URL`
+- SQLite fallback for local development
 
-## Deployment
+### Authentication and API
+- JWT-based authentication
+- CORS configuration
+- Request and document validation
 
-- **Backend (Render):** create a Blueprint from the repository root using
-  [`render.yaml`](./render.yaml). It provisions the FastAPI web service and
-  PostgreSQL; the database connection string is wired to `DATABASE_URL`, and
-  a JWT signing secret is generated. Enter `REVIEWER_USERNAME`,
-  `REVIEWER_PASSWORD`, `GEMINI_API_KEY`, `REDIS_URL`, and `CORS_ORIGINS` when
-  prompted. The Render backend sends relevant excerpts to Gemini when enabled;
-  review provider data handling and quota/billing settings before using real
-  contracts. For
-  `REDIS_URL`, first create a Render Key Value instance in the same region and
-  use its **internal** connection URL. For `CORS_ORIGINS`, provide the exact
-  Vercel deployment origin (for example, `https://your-project.vercel.app`).
-  Keep reviewer credentials private and use a strong, unique password.
-- **Frontend (Vercel):** import the repository and set the project root to
-  `frontend`. Use the default Vite build command `npm run build` and output
-  directory `dist`; [`vercel.json`](./frontend/vercel.json) configures SPA
-  route fallback. Set `VITE_API_BASE_URL` to the deployed Render API origin
-  (for example, `https://your-api.onrender.com`), then redeploy the frontend.
-- **Deployment order:** create/import the Vercel project first to obtain its
-  origin, create the Render Key Value instance, then create the Render
-  Blueprint and supply those values. After both deploy, verify login, upload,
-  review persistence, and browser CORS behavior. Do not commit `.env` files or
-  put secret values in either deployment manifest.
+### Testing and Development
+- Pytest
+- ESLint
+- Git
+- GitHub
+- Visual Studio Code
 
-This workspace has not been connected to a GitHub remote or deployment
-account, so it does not claim live repository or deployment URLs. After
-publishing, add the actual GitHub, Render, and Vercel URLs here.
+### Deployment
+- Vercel for the frontend
+- Render for the backend
 
-## Validation
+## System Architecture
 
-From the project root:
+```text
+                  User
+                   |
+                   v
+          React + TypeScript
+             (Vite Frontend)
+                   |
+                   v
+              FastAPI API
+                   |
+                   v
+          Document Ingestion
+                   |
+                   v
+          Document Text Parsing
+                   |
+                   v
+        Clause Extraction and
+            Classification
+                   |
+                   v
+        Policy Rule Extraction
+                   |
+                   v
+          Policy Comparison
+                   |
+                   v
+             Risk Analysis
+                   |
+                   v
+       Evidence-Based Reviewer
+             Mechanism
+                   |
+                   v
+       Report Generation and
+          Review Persistence
+```
+
+## How It Works
+
+1. The user uploads a contract and, when required, a reference policy.
+2. The backend validates the documents and extracts their text.
+3. Relevant clauses are identified and classified into categories.
+4. Policy requirements are extracted or supplied from the reference policy.
+5. Contract terms are compared against applicable requirements.
+6. Potential risks and deviations are identified with supporting evidence.
+7. The reviewer examines the findings and records decisions.
+8. A structured report is generated for further review.
+
+## Policy Retrieval Approach
+
+The current lightweight policy retrieval implementation uses **token-overlap matching** to identify policy passages relevant to a requirement.
+
+This approach reduces dependency and memory requirements compared with embedding-based retrieval. However, it may miss relevant passages when the same meaning is expressed using different words.
+
+Retrieved passages and automatically inferred policy rules should be verified by a human reviewer.
+
+## Example Policy Deviation
+
+**Reference policy:** Payment must be completed within 30 days.
+
+**Contract clause:** Payment is due within 45 days.
+
+**Potential finding:** The contract permits a longer payment period than the reference policy.
+
+**Reviewer action:** Verify the source wording, confirm that the policy applies to the contract, and determine the appropriate action.
+
+This example illustrates the intended comparison behavior; actual detection depends on the implemented comparison rules and input documents.
+
+## Project Structure
+
+```text
+Contract_Review_System/
+├── backend/
+│   ├── app/
+│   │   ├── agents/
+│   │   ├── services/
+│   │   ├── main.py
+│   │   └── ...
+│   ├── tests/
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   ├── package.json
+│   └── ...
+├── .gitignore
+└── README.md
+```
+
+The exact files and subdirectories may evolve during development.
+
+## Prerequisites
+
+- Python 3.12
+- Node.js and npm
+- Git
+
+Additional configuration may be required for the deployed database and authentication.
+
+## Local Installation and Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/polakiajay25-blip/ContractIQ.git
+cd ContractIQ
+```
+
+### 2. Set Up the Backend
+
+From the repository root, create and activate a virtual environment:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest backend\tests -q
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+If PowerShell blocks activation in the current terminal:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+.\.venv\Scripts\Activate.ps1
+```
+
+Install the dependencies:
+
+```powershell
+python -m pip install --upgrade pip
+python -m pip install -r backend\requirements.txt
+```
+
+Start the backend:
+
+```powershell
+uvicorn app.main:app --app-dir backend --reload
+```
+
+The backend should be available at:
+
+`http://127.0.0.1:8000`
+
+Interactive API documentation:
+
+`http://127.0.0.1:8000/docs`
+
+### 3. Set Up the Frontend
+
+Open another terminal and run:
+
+```powershell
 cd frontend
+npm install
+```
+
+Configure the frontend API base URL using the environment-variable name expected by the frontend code. For local development, the configured URL should point to:
+
+`http://127.0.0.1:8000`
+
+Start the frontend:
+
+```powershell
+npm run dev
+```
+
+Vite will display the local development URL, normally:
+
+`http://localhost:5173`
+
+### 4. Build and Lint the Frontend
+
+From the `frontend` directory:
+
+```powershell
 npm run build
 npm run lint
 ```
 
-## API overview
+## Running Tests
 
-- `POST /api/v1/auth/token` — exchange reviewer credentials for a JWT.
-- `POST /api/v1/documents/compare-uploaded-policy` — analyze contract against
-  an uploaded policy and persist a review.
-- `POST /api/v1/documents/compare-versions` — compare old and new contract
-  files, returning changed text and 1-based extracted-text line ranges.
-- `GET /api/v1/reviews` and `GET /api/v1/reviews/{analysis_id}` — review
-  history.
-- `PUT /api/v1/reviews/{analysis_id}/{item_id}` — save a reviewer decision.
-- `POST /api/v1/documents/compare-uploaded-policy-report` — download a PDF
-  report.
+From the repository root, activate the virtual environment and run:
 
-All `/api/v1` routes other than token issuance require
-`Authorization: Bearer <token>`. Health and root endpoints remain public.
+```powershell
+python -m pytest backend\tests -v
+```
+
+Run the tests before submitting changes to verify that the current implementation passes its test suite.
+
+## API Overview
+
+The backend includes routes for authentication, document analysis, policy comparison, contract version comparison, report generation, and review management.
+
+Key documented endpoints include:
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/health` | Check backend health |
+| POST | `/api/v1/auth/token` | Obtain an authentication token |
+| POST | `/api/v1/documents/compare-uploaded-policy` | Compare a contract with an uploaded policy |
+| POST | `/api/v1/documents/compare-versions` | Compare contract versions |
+| GET | `/api/v1/reviews` | Retrieve review records |
+| GET | `/api/v1/reviews/{analysis_id}` | Retrieve a specific review |
+| PUT | `/api/v1/reviews/{analysis_id}/{item_id}` | Update a review item |
+| POST | `/api/v1/documents/compare-uploaded-policy-report` | Generate a policy-comparison report |
+
+For the complete list of routes and their request formats, refer to the interactive API documentation:
+
+https://contractiq-api-12cr.onrender.com/docs
+
+Protected endpoints require a valid access token as configured by the backend.
+
+## Database Configuration
+
+The application selects its database based on the `DATABASE_URL` environment variable.
+
+- **PostgreSQL:** Used when a PostgreSQL connection URL is configured.
+- **SQLite:** Used as the local fallback when `DATABASE_URL` is not set. The default database file is `data/reviews.db`.
+
+The database layer uses SQLAlchemy to manage database connections and review persistence.
+
+The database used by a particular deployment depends on its environment configuration.
+
+## Deployment
+
+### Frontend
+
+The React frontend is deployed on Vercel:
+
+https://contract-iq-seven.vercel.app/
+
+### Backend
+
+The FastAPI backend is deployed on Render:
+
+https://contractiq-api-12cr.onrender.com
+
+### Source Code
+
+The project repository is hosted on GitHub:
+
+https://github.com/polakiajay25-blip/ContractIQ
+
+The frontend must be configured to communicate with the deployed backend, and the backend CORS configuration must allow the frontend origin.
+
+## Limitations
+
+- Automatically extracted clauses and policy rules may require correction.
+- Token-overlap retrieval can miss relevant passages with different wording.
+- Document extraction quality depends on the source file and parser.
+- Identified risks and policy deviations require human verification.
+- Numerical deviation detection should be tested against representative policies and contracts before relying on it.
+- Database persistence and protected endpoints depend on correct configuration.
+
+## Future Improvements
+
+Potential improvements, where not already implemented, include:
+
+- Better retrieval of semantically equivalent policy wording.
+- Expanded numerical deviation tests for payment periods, service availability, and incident-notification deadlines.
+- Additional tests for extraction accuracy and evidence locations.
+- Improved handling of scanned documents, if required.
+- Further security and deployment testing.
+
+These are potential improvements rather than claims of completed functionality.
+
+## Disclaimer
+
+ContractIQ is intended to assist human contract reviewers. It does not replace professional legal advice. Users should validate the original documents, applicable policy requirements, evidence, and final decisions before relying on a review report.
+
+## Author
+
+Developed as an Agentic AI Contract Review & Risk Identification System project to support document ingestion, clause analysis, policy comparison, risk identification, and evidence-based human review.
