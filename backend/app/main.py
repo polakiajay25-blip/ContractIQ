@@ -438,7 +438,7 @@ async def compare_uploaded_policy(
                 "review_status"
             ],
             "policy_retrieval": {
-                "method": "sentence-transformers + FAISS",
+                "method": "token-overlap",
                 "passage_count": len(retrieved_policy_evidence),
                 "top_k_per_requirement": 3,
             },

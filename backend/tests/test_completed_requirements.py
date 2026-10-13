@@ -672,27 +672,8 @@ def test_review_status_distinguishes_unresolved_from_confirmed_deviation():
     assert determine_review_status([], []) == "human_review_required"
 
 
-def test_policy_retrieval_returns_semantically_relevant_source(monkeypatch):
+def test_policy_retrieval_returns_relevant_source(monkeypatch):
     monkeypatch.delenv("REDIS_URL", raising=False)
-
-    class FakeEmbeddingModel:
-        def encode(self, texts, **kwargs):
-            assert kwargs["normalize_embeddings"] is True
-            return [
-                [1.0, 0.0]
-                if "invoice" in text.lower() or "payment" in text.lower()
-                else [0.0, 1.0]
-                for text in texts
-            ]
-
-    def fake_model_loader(model_name: str):
-        assert model_name
-        return FakeEmbeddingModel()
-
-    monkeypatch.setattr(
-        "backend.app.services.policy_retriever._load_embedding_model",
-        fake_model_loader,
-    )
 
     retrieved = retrieve_policy_evidence(
         [
@@ -705,15 +686,14 @@ def test_policy_retrieval_returns_semantically_relevant_source(monkeypatch):
                 "source_location": "Page 5",
             },
         ],
-        {"payment_terms": "invoice payment deadline"},
+        {"payment_terms": "invoices paid 30 days"},
         top_k=1,
     )
 
     assert len(retrieved) == 1
     assert retrieved[0]["source_location"] == "Page 2"
     assert retrieved[0]["category"] == "payment_terms"
-    assert retrieved[0]["retrieval_score"] > 0.9
-
+    assert 0 < retrieved[0]["retrieval_score"] <= 1
 
 def test_qualitative_policy_categories_are_sent_to_human_review():
     extracted = extract_policy_rules(

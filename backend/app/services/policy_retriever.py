@@ -1,26 +1,29 @@
 import hashlib
 import json
 import os
-from functools import lru_cache
-from typing import Any
-
-import faiss
-import numpy as np
+import re
+from collections import Counter
 
 
-DEFAULT_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+_TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
+
+_STOP_WORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "by", "for",
+    "from", "in", "is", "it", "of", "on", "or", "that", "the",
+    "this", "to", "was", "were", "will", "with",
+}
 
 
-@lru_cache(maxsize=1)
-def _load_embedding_model(model_name: str) -> Any:
-    from sentence_transformers import SentenceTransformer
-
-    return SentenceTransformer(model_name)
+def _tokens(text: str) -> list[str]:
+    return [
+        token
+        for token in _TOKEN_PATTERN.findall(text.lower())
+        if token not in _STOP_WORDS
+    ]
 
 
 def _cached_retrieval(cache_key: str) -> list[dict] | None:
     redis_url = os.getenv("REDIS_URL")
-
     if not redis_url:
         return None
 
@@ -34,14 +37,12 @@ def _cached_retrieval(cache_key: str) -> list[dict] | None:
 
 def _store_retrieval(cache_key: str, results: list[dict]) -> None:
     redis_url = os.getenv("REDIS_URL")
-
     if not redis_url:
         return
 
     from redis import Redis
 
     ttl = int(os.getenv("REDIS_CACHE_TTL_SECONDS", "3600"))
-
     if ttl <= 0:
         raise RuntimeError("REDIS_CACHE_TTL_SECONDS must be positive.")
 
@@ -54,7 +55,7 @@ def retrieve_policy_evidence(
     queries: dict[str, str],
     top_k: int = 3,
 ) -> list[dict]:
-    """Retrieve source-backed policy passages relevant to each clause type."""
+    """Retrieve relevant source-backed passages using token overlap."""
     passages = [
         item
         for item in policy_evidence
@@ -64,13 +65,9 @@ def retrieve_policy_evidence(
     if not passages or not queries:
         return []
 
-    model_name = os.getenv(
-        "POLICY_EMBEDDING_MODEL",
-        DEFAULT_EMBEDDING_MODEL,
-    )
     cache_payload = json.dumps(
         {
-            "model": model_name,
+            "method": "token-overlap-v1",
             "passages": passages,
             "queries": queries,
             "top_k": top_k,
@@ -80,56 +77,35 @@ def retrieve_policy_evidence(
     cache_key = "policy-retrieval:" + hashlib.sha256(
         cache_payload.encode("utf-8")
     ).hexdigest()
-    cached_results = _cached_retrieval(cache_key)
 
-    if cached_results is not None:
-        return cached_results
+    cached = _cached_retrieval(cache_key)
+    if cached is not None:
+        return cached
 
-    model = _load_embedding_model(model_name)
-    passage_vectors = model.encode(
-        [item["text"] for item in passages],
-        convert_to_numpy=True,
-        normalize_embeddings=True,
-    )
-    passage_vectors = np.ascontiguousarray(
-        passage_vectors,
-        dtype=np.float32,
-    )
-
-    index = faiss.IndexFlatIP(passage_vectors.shape[1])
-    index.add(passage_vectors)
-
-    query_categories = list(queries)
-    query_vectors = model.encode(
-        [queries[category] for category in query_categories],
-        convert_to_numpy=True,
-        normalize_embeddings=True,
-    )
-    query_vectors = np.ascontiguousarray(
-        query_vectors,
-        dtype=np.float32,
-    )
-    scores, passage_indices = index.search(
-        query_vectors,
-        min(max(top_k, 1), len(passages)),
-    )
-
+    passage_tokens = [
+        Counter(_tokens(item["text"]))
+        for item in passages
+    ]
+    limit = min(max(top_k, 1), len(passages))
     results = []
 
-    for category, category_scores, category_indices in zip(
-        query_categories,
-        scores,
-        passage_indices,
-    ):
-        for score, passage_index in zip(
-            category_scores,
-            category_indices,
-        ):
-            if passage_index < 0:
-                continue
+    for category, query in queries.items():
+        query_terms = set(_tokens(query))
+        if not query_terms:
+            continue
 
+        ranked = []
+        for index, counts in enumerate(passage_tokens):
+            overlap = query_terms.intersection(counts)
+            if overlap:
+                score = len(overlap) / len(query_terms)
+                ranked.append((score, index))
+
+        ranked.sort(key=lambda item: (-item[0], item[1]))
+
+        for score, passage_index in ranked[:limit]:
             results.append({
-                **passages[int(passage_index)],
+                **passages[passage_index],
                 "category": category,
                 "retrieval_score": float(score),
             })
