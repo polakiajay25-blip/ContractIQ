@@ -1,0 +1,34 @@
+.env
+.env.*
+!.env.example
+backend/.env
+
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+node_modules/
+frontend/dist/
+dist/
+
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# Local secrets, uploaded contracts, and database files
+data/uploads/
+*.db
+*.sqlite
+*.sqlite3
+
+# Local secrets, uploaded contracts, and database files
+data/uploads/
+*.db
+*.sqlite
+*.sqlite3

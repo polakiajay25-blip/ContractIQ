@@ -1,0 +1,16 @@
+REFERENCE POLICY — SAMPLE FOR TESTING
+
+1. Payment Terms
+All invoices must be paid within 30 days of the invoice date.
+
+2. Confidentiality
+Confidential information must remain protected during the agreement and for 3 years after termination.
+
+3. Liability
+The contract must clearly specify the maximum aggregate liability.
+
+4. Intellectual Property
+Ownership of intellectual property created under the agreement must be explicitly documented.
+
+5. Dispute Resolution
+The agreement must specify a formal dispute-resolution process.

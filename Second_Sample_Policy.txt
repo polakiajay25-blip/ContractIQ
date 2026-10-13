@@ -1,0 +1,27 @@
+# SOFTWARE SERVICE CONTRACT REVIEW POLICY
+
+## 1. Payment
+Payment terms must clearly state the amount, billing frequency, and payment deadline.
+
+## 2. Service Availability
+The agreement should define a measurable service availability target, such as 99.9% monthly uptime.
+
+## 3. Data Protection
+The service provider must protect customer data and use it only for authorized purposes.
+
+## 4. Confidentiality
+Confidentiality obligations must apply to both parties and cover appropriate handling of confidential information.
+
+## 5. Termination
+Termination provisions must specify notice requirements and any applicable exceptions.
+
+## 6. Liability
+The agreement should define an appropriate liability cap and explain relevant exclusions.
+
+## 7. Security Incidents
+The agreement should specify a notification deadline for security incidents, such as notification within 72 hours of discovery.
+
+## 8. Governing Law
+The agreement must identify the governing law and jurisdiction.
+
+**Review note:** These are fictional testing requirements, not legal advice. A reviewer must assess applicability and context before making any conclusion.
